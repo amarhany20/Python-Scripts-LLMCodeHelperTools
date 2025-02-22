@@ -5,21 +5,38 @@ import json
 def create_structure_from_json(structure_json, base_path):
     """
     Create a folder and file structure from a given JSON representation.
+    Only creates new files and folders that don't exist yet.
 
     :param structure_json: JSON data representing the folder structure.
     :param base_path: The root directory where the structure should be created.
     """
+    # Create base directory if it doesn't exist
+    os.makedirs(base_path, exist_ok=True)
+
+    created_items = []
+    existing_items = []
+
     for path in structure_json:
         full_path = os.path.join(base_path, path.strip("/"))
 
         if path.endswith("/"):
-            # Create a folder
-            os.makedirs(full_path, exist_ok=True)
+            # Handle directory creation
+            if not os.path.exists(full_path):
+                os.makedirs(full_path, exist_ok=True)
+                created_items.append(full_path)
+            else:
+                existing_items.append(full_path)
         else:
-            # Create a file
-            os.makedirs(os.path.dirname(full_path), exist_ok=True)
-            with open(full_path, "w", encoding="utf-8") as f:
-                f.write("")  # Create an empty file
+            # Handle file creation
+            if not os.path.exists(full_path):
+                os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                with open(full_path, "w", encoding="utf-8") as f:
+                    f.write("")  # Create an empty file
+                created_items.append(full_path)
+            else:
+                existing_items.append(full_path)
+
+    return created_items, existing_items
 
 
 def load_json_from_file(json_path):
@@ -42,6 +59,18 @@ if __name__ == "__main__":
     structure_data = load_json_from_file(json_file)
 
     # Create the folder and file structure
-    create_structure_from_json(structure_data, base_directory)
+    new_items, skip_items = create_structure_from_json(structure_data, base_directory)
 
-    print(f"Folder structure created successfully at: {base_directory}")
+    # Print results
+    if new_items:
+        print("\nCreated new items:")
+        for item in new_items:
+            print(f"+ {item}")
+
+    if skip_items:
+        print("\nSkipped existing items:")
+        for item in skip_items:
+            print(f"- {item}")
+
+    if not new_items:
+        print("\nNo new items were created. All files and folders already exist.")
